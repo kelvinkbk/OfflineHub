@@ -140,9 +140,11 @@ function App() {
     socketRef.current.on("connect", () => {
       console.log("Connected to backend");
       setIsSocketConnected(true);
+      // Get userId from localStorage to ensure it's available
+      const userIdForSocket = localStorage.getItem("userId") || `user-${Date.now()}`;
       socketRef.current.emit("user_connected", {
-        userId,
-        username: `User-${userId.slice(-4)}`,
+        userId: userIdForSocket,
+        username: `User-${userIdForSocket.slice(-4)}`,
       });
     });
 
