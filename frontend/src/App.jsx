@@ -16,7 +16,7 @@ function App() {
   const [sharedFiles, setSharedFiles] = useState([]);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [pendingMessages, setPendingMessages] = useState(0);
-  
+
   const socketRef = useRef(null);
   const dbRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -68,7 +68,7 @@ function App() {
         .register("/service-worker.js")
         .then(() => console.log("Service worker registered"))
         .catch((err) =>
-          console.log("Service worker registration failed:", err)
+          console.log("Service worker registration failed:", err),
         );
     }
 
@@ -387,10 +387,7 @@ function App() {
                         ✓✓
                       </span>
                     ) : (
-                      <span
-                        className="pending"
-                        title="Pending sync (offline)"
-                      >
+                      <span className="pending" title="Pending sync (offline)">
                         ✓
                       </span>
                     )}
@@ -405,10 +402,7 @@ function App() {
           <div className="peers-container">
             <div className="peers-header">
               <h2>👥 Nearby Peers ({peers.length})</h2>
-              <button
-                className="btn-close"
-                onClick={() => setShowPeers(false)}
-              >
+              <button className="btn-close" onClick={() => setShowPeers(false)}>
                 ✕
               </button>
             </div>
@@ -450,10 +444,7 @@ function App() {
           <div className="files-container">
             <div className="files-header">
               <h2>📁 Shared Files ({sharedFiles.length})</h2>
-              <button
-                className="btn-close"
-                onClick={() => setSharedFiles([])}
-              >
+              <button className="btn-close" onClick={() => setSharedFiles([])}>
                 ✕
               </button>
             </div>
