@@ -186,6 +186,8 @@ function App() {
       setPendingMessages(0);
     };
   };
+
+  const mapConnectionType = (type) => {
     const typeMap = {
       wifi: "📶 WiFi",
       "4g": "📱 LTE",
