@@ -53,7 +53,7 @@ OfflineHub now supports multiple connection protocols and works seamlessly offli
 
 ### Network Manager
 
-```
+```text
 NetworkManager
 ├── Connection Detection
 │   ├── Online/Offline status
@@ -73,7 +73,7 @@ NetworkManager
 
 ### Peer Discovery Service
 
-```
+```text
 PeerDiscoveryService
 ├── Broadcasting
 │   ├── Presence advertisement
@@ -91,7 +91,7 @@ PeerDiscoveryService
 
 ### Offline Sync Service
 
-```
+```text
 OfflineSyncService
 ├── Local Storage (IndexedDB)
 │   ├── Messages

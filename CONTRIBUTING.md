@@ -20,7 +20,7 @@ Thank you for your interest in contributing! We welcome contributions from every
 
 ## Commit Message Format
 
-```
+```text
 type(scope): subject
 
 body

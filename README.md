@@ -29,7 +29,7 @@
 
 ## 🏗️ Architecture
 
-```
+```text
 OfflineHub/
 ├── frontend/              # React web app
 │   ├── src/
@@ -84,8 +84,8 @@ yarn dev
 
 ### Development Server
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5000
+- Frontend: [http://localhost:3000](http://localhost:3000)
+- Backend API: [http://localhost:5000](http://localhost:5000)
 
 ## 📚 Project Structure
 
