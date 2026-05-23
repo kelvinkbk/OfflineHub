@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import io from "socket.io-client";
 import "./App.css";
 
 function App() {
@@ -10,11 +11,37 @@ function App() {
   const [networkStatus, setNetworkStatus] = useState(null);
   const [showPeers, setShowPeers] = useState(false);
   const [connectionSpeed, setConnectionSpeed] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [sharedFiles, setSharedFiles] = useState([]);
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [pendingMessages, setPendingMessages] = useState(0);
+  
+  const socketRef = useRef(null);
+  const dbRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
+    // Initialize user ID
+    const storedUserId = localStorage.getItem("userId");
+    if (!storedUserId) {
+      const newUserId = `user-${Date.now()}`;
+      localStorage.setItem("userId", newUserId);
+      setUserId(newUserId);
+    } else {
+      setUserId(storedUserId);
+    }
+
+    // Initialize IndexedDB
+    initializeDB();
+
+    // Connect to WebSocket server
+    connectToSocket();
+
     // Monitor online/offline status
     const handleOnline = () => {
       setIsOnline(true);
+      syncPendingMessages();
     };
     const handleOffline = () => {
       setIsOnline(false);
@@ -41,22 +68,124 @@ function App() {
         .register("/service-worker.js")
         .then(() => console.log("Service worker registered"))
         .catch((err) =>
-          console.log("Service worker registration failed:", err),
+          console.log("Service worker registration failed:", err)
         );
     }
 
     // Discover peers
     discoverPeers();
-    const peerInterval = setInterval(discoverPeers, 10000); // Every 10 seconds
+    const peerInterval = setInterval(discoverPeers, 10000);
 
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       clearInterval(peerInterval);
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
     };
   }, []);
 
-  const mapConnectionType = (type) => {
+  const initializeDB = async () => {
+    return new Promise((resolve) => {
+      const request = indexedDB.open("OfflineHub", 1);
+      request.onerror = () => console.error("DB error:", request.error);
+      request.onsuccess = () => {
+        dbRef.current = request.result;
+        loadMessagesFromDB();
+        resolve();
+      };
+      request.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains("messages")) {
+          const store = db.createObjectStore("messages", { keyPath: "id" });
+          store.createIndex("timestamp", "timestamp");
+          store.createIndex("synced", "synced");
+        }
+        if (!db.objectStoreNames.contains("files")) {
+          const store = db.createObjectStore("files", { keyPath: "id" });
+          store.createIndex("uploaded", "uploaded");
+        }
+      };
+    });
+  };
+
+  const loadMessagesFromDB = () => {
+    if (!dbRef.current) return;
+    const tx = dbRef.current.transaction(["messages"], "readonly");
+    const store = tx.objectStore("messages");
+    const request = store.getAll();
+    request.onsuccess = () => {
+      setMessages(request.result.sort((a, b) => a.timestamp - b.timestamp));
+      const unsynced = request.result.filter((m) => !m.synced).length;
+      setPendingMessages(unsynced);
+    };
+  };
+
+  const saveMessageToDB = (message) => {
+    if (!dbRef.current) return;
+    const tx = dbRef.current.transaction(["messages"], "readwrite");
+    const store = tx.objectStore("messages");
+    store.put(message);
+  };
+
+  const connectToSocket = () => {
+    socketRef.current = io("http://localhost:5000", {
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5,
+    });
+
+    socketRef.current.on("connect", () => {
+      console.log("Connected to backend");
+      setIsSocketConnected(true);
+      socketRef.current.emit("user_connected", {
+        userId,
+        username: `User-${userId.slice(-4)}`,
+      });
+    });
+
+    socketRef.current.on("disconnect", () => {
+      console.log("Disconnected from backend");
+      setIsSocketConnected(false);
+    });
+
+    socketRef.current.on("new_message", (message) => {
+      setMessages((prev) => [...prev, message]);
+    });
+
+    socketRef.current.on("file_shared", (file) => {
+      setSharedFiles((prev) => [...prev, file]);
+    });
+
+    socketRef.current.on("user_typing", (data) => {
+      console.log(`${data.username} is typing...`);
+    });
+
+    socketRef.current.on("peer_connected", (peer) => {
+      console.log(`Peer connected: ${peer.name}`);
+      // Could initialize WebRTC here
+    });
+  };
+
+  const syncPendingMessages = async () => {
+    if (!dbRef.current || !socketRef.current) return;
+    const tx = dbRef.current.transaction(["messages"], "readwrite");
+    const store = tx.objectStore("messages");
+    const index = store.index("synced");
+    const request = index.getAll(false);
+
+    request.onsuccess = () => {
+      const unsyncedMsgs = request.result;
+      unsyncedMsgs.forEach((msg) => {
+        socketRef.current.emit("send_message", msg);
+        msg.synced = true;
+        store.put(msg);
+      });
+      setPendingMessages(0);
+    };
+  };
     const typeMap = {
       wifi: "📶 WiFi",
       "4g": "📱 LTE",
@@ -108,15 +237,82 @@ function App() {
     const newMessage = {
       id: Date.now(),
       text: messageInput,
-      timestamp: new Date().toLocaleTimeString(),
-      sender: "You",
-      synced: isOnline,
+      timestamp: new Date().getTime(),
+      sender: `User-${userId?.slice(-4) || "?"}`,
+      senderId: userId,
+      synced: isSocketConnected && isOnline,
+      type: "text",
     };
 
-    setMessages([...messages, newMessage]);
+    // Save to local DB immediately
+    saveMessageToDB(newMessage);
+    setMessages((prev) => [...prev, newMessage]);
     setMessageInput("");
 
-    // TODO: Send to backend or WebRTC peer
+    // Send to backend if connected
+    if (socketRef.current && isSocketConnected) {
+      socketRef.current.emit("send_message", newMessage);
+      console.log("Message sent to backend");
+    } else {
+      console.log("Message saved locally (will sync when online)");
+      setPendingMessages((p) => p + 1);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      handleFileShare(file);
+    }
+  };
+
+  const handleFileShare = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const fileData = {
+        id: Date.now(),
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        data: e.target.result,
+        timestamp: new Date().getTime(),
+        sender: `User-${userId?.slice(-4) || "?"}`,
+      };
+
+      // Save file to IndexedDB
+      if (dbRef.current) {
+        const tx = dbRef.current.transaction(["files"], "readwrite");
+        const store = tx.objectStore("files");
+        store.put(fileData);
+      }
+
+      // Share via socket if connected
+      if (socketRef.current && isSocketConnected) {
+        socketRef.current.emit("share_file", {
+          id: fileData.id,
+          name: fileData.name,
+          size: fileData.size,
+          type: fileData.type,
+          timestamp: fileData.timestamp,
+          sender: fileData.sender,
+        });
+      }
+
+      setSharedFiles((prev) => [...prev, fileData]);
+      setSelectedFile(null);
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const downloadFile = (file) => {
+    const blob = new Blob([file.data], { type: file.type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.name;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -127,9 +323,21 @@ function App() {
           <div className={`status ${isOnline ? "online" : "offline"}`}>
             {isOnline ? "🟢 Online" : "🔴 Offline"}
           </div>
+          {isSocketConnected && (
+            <div className="socket-status" title="Connected to server">
+              ⚡ Connected
+            </div>
+          )}
+          {pendingMessages > 0 && (
+            <div className="pending-badge" title="Messages waiting to sync">
+              ⏱️ {pendingMessages}
+            </div>
+          )}
           <div className="connection-info">
             <span>{connectionType}</span>
-            {connectionSpeed && <span className="speed">{connectionSpeed} Mbps</span>}
+            {connectionSpeed && (
+              <span className="speed">{connectionSpeed} Mbps</span>
+            )}
           </div>
         </div>
       </header>
@@ -137,27 +345,54 @@ function App() {
       <main className="app-main">
         <div className="messages-container">
           <div className="container-header">
-            <h2>💬 Messages</h2>
-            <button 
-              className="btn-peers"
-              onClick={() => setShowPeers(!showPeers)}
-              title="Show nearby peers"
-            >
-              👥 {peers.length}
-            </button>
+            <h2>💬 Messages {messages.length > 0 && `(${messages.length})`}</h2>
+            <div className="header-controls">
+              <button
+                className="btn-peers"
+                onClick={() => setShowPeers(!showPeers)}
+                title="Show nearby peers"
+              >
+                👥 {peers.length}
+              </button>
+              {sharedFiles.length > 0 && (
+                <span className="file-count" title="Shared files">
+                  📁 {sharedFiles.length}
+                </span>
+              )}
+            </div>
           </div>
           <div className="messages-list">
             {messages.length === 0 ? (
               <p className="empty-state">No messages yet. Start chatting!</p>
             ) : (
               messages.map((msg) => (
-                <div key={msg.id} className="message">
-                  <strong>{msg.sender}</strong>
-                  <p>{msg.text}</p>
-                  <small>
-                    {msg.timestamp}
-                    {msg.synced ? " ✓" : " (pending sync)"}
-                  </small>
+                <div
+                  key={msg.id}
+                  className={`message ${
+                    msg.senderId === userId ? "sent" : "received"
+                  }`}
+                >
+                  <div className="message-header">
+                    <strong>{msg.sender}</strong>
+                    <span className="message-time">
+                      {new Date(msg.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <p className="message-text">{msg.text}</p>
+                  <div className="message-footer">
+                    {msg.synced ? (
+                      <span className="synced" title="Synced to server">
+                        ✓✓
+                      </span>
+                    ) : (
+                      <span
+                        className="pending"
+                        title="Pending sync (offline)"
+                      >
+                        ✓
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))
             )}
@@ -166,7 +401,15 @@ function App() {
 
         {showPeers && (
           <div className="peers-container">
-            <h2>👥 Nearby Peers</h2>
+            <div className="peers-header">
+              <h2>👥 Nearby Peers ({peers.length})</h2>
+              <button
+                className="btn-close"
+                onClick={() => setShowPeers(false)}
+              >
+                ✕
+              </button>
+            </div>
             {peers.length === 0 ? (
               <p className="empty-state">No peers discovered</p>
             ) : (
@@ -176,19 +419,64 @@ function App() {
                     <div className="peer-header">
                       <h3>{peer.name}</h3>
                       <span className={`status-badge ${peer.status}`}>
-                        {peer.status === "online" ? "🟢" : "🟡"}
+                        {peer.status === "online" ? "🟢 Online" : "🟡 Idle"}
                       </span>
                     </div>
                     <div className="peer-info">
-                      <p><strong>Protocol:</strong> {peer.protocol}</p>
-                      <p><strong>Signal:</strong> {peer.signal} dBm</p>
-                      <p><strong>Status:</strong> {peer.status}</p>
+                      <p>
+                        <strong>Protocol:</strong> {peer.protocol}
+                      </p>
+                      <p>
+                        <strong>Signal:</strong> {peer.signal} dBm
+                      </p>
+                      <p>
+                        <strong>Status:</strong> {peer.status}
+                      </p>
                     </div>
-                    <button className="btn-connect">Connect</button>
+                    <div className="peer-actions">
+                      <button className="btn-connect">Connect</button>
+                      <button className="btn-info">Info</button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {sharedFiles.length > 0 && (
+          <div className="files-container">
+            <div className="files-header">
+              <h2>📁 Shared Files ({sharedFiles.length})</h2>
+              <button
+                className="btn-close"
+                onClick={() => setSharedFiles([])}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="files-list">
+              {sharedFiles.map((file) => (
+                <div key={file.id} className="file-item">
+                  <div className="file-info">
+                    <span className="file-icon">📄</span>
+                    <div className="file-details">
+                      <p className="file-name">{file.name}</p>
+                      <p className="file-meta">
+                        {(file.size / 1024).toFixed(2)} KB •{" "}
+                        {new Date(file.timestamp).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    className="btn-download"
+                    onClick={() => downloadFile(file)}
+                  >
+                    ⬇️ Download
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -220,15 +508,31 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <form onSubmit={handleSendMessage}>
+        <form onSubmit={handleSendMessage} className="message-form">
           <input
             type="text"
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
             placeholder="Type a message..."
-            disabled={!isOnline && messages.length === 0}
+            className="message-input"
           />
-          <button type="submit">Send</button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileSelect}
+            style={{ display: "none" }}
+          />
+          <button
+            type="button"
+            className="btn-file"
+            onClick={() => fileInputRef.current?.click()}
+            title="Share file"
+          >
+            📎
+          </button>
+          <button type="submit" className="btn-send">
+            Send
+          </button>
         </form>
       </footer>
     </div>
