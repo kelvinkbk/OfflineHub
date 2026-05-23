@@ -5,6 +5,7 @@
 ## ✨ Features
 
 ### Core Features
+
 - 💬 **Local Chat** - Real-time messaging between devices on same network or offline
 - 🎙️ **Walkie-Talkie** - Push-to-talk voice communication (WebRTC)
 - 📁 **File Sharing** - Share documents, images, media locally and globally
@@ -17,6 +18,7 @@
 - ⏰ **Message Queue** - Messages stored locally, delivered when online
 
 ### Additional Features
+
 - User profiles & avatars
 - Group chat rooms
 - Message search & history
@@ -61,6 +63,7 @@ OfflineHub/
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Node.js 16+
 - Yarn or npm
 - Modern browser (Chrome, Firefox, Safari, Edge)
@@ -80,13 +83,16 @@ yarn dev
 ```
 
 ### Development Server
+
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:5000
 
 ## 📚 Project Structure
 
 ### Frontend (`frontend/`)
+
 React-based web application with:
+
 - Service Worker for offline support
 - IndexedDB for local data persistence
 - WebRTC for peer-to-peer communication
@@ -94,7 +100,9 @@ React-based web application with:
 - Redux/Context API for state management
 
 ### Backend (`backend/`)
+
 Node.js/Express server providing:
+
 - REST API for user management
 - WebSocket server for real-time messaging
 - File upload & storage
@@ -102,7 +110,9 @@ Node.js/Express server providing:
 - Synchronization logic for offline data
 
 ### Shared (`shared/`)
+
 TypeScript types and utilities:
+
 - Message & User interfaces
 - Constants & enums
 - Validation functions
@@ -110,14 +120,14 @@ TypeScript types and utilities:
 
 ## 🔧 Technology Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React, Vite, TailwindCSS, Socket.io |
-| Backend | Node.js, Express, MongoDB, WebSocket |
-| Real-time | Socket.io, WebRTC |
-| Offline | Service Workers, IndexedDB, Sync API |
-| Security | JWT, bcrypt, TLS/SSL |
-| DevOps | Docker, GitHub Actions |
+| Layer     | Technology                           |
+| --------- | ------------------------------------ |
+| Frontend  | React, Vite, TailwindCSS, Socket.io  |
+| Backend   | Node.js, Express, MongoDB, WebSocket |
+| Real-time | Socket.io, WebRTC                    |
+| Offline   | Service Workers, IndexedDB, Sync API |
+| Security  | JWT, bcrypt, TLS/SSL                 |
+| DevOps    | Docker, GitHub Actions               |
 
 ## 📋 Feature Roadmap
 

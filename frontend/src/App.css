@@ -15,7 +15,9 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, sans-serif;
   background-color: var(--light);
   color: var(--dark);
 }
@@ -40,6 +42,27 @@ body {
 .app-header h1 {
   font-size: 1.75rem;
   font-weight: 700;
+}
+
+.header-right {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.connection-info {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.connection-info .speed {
+  font-size: 0.75rem;
+  opacity: 0.9;
 }
 
 .status {
@@ -75,6 +98,111 @@ body {
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
+}
+
+.container-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.container-header h2 {
+  font-size: 1.25rem;
+  color: var(--dark);
+  margin: 0;
+}
+
+.btn-peers {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: var(--transition);
+}
+
+.btn-peers:hover {
+  background-color: #2563eb;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.peers-container {
+  background: white;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--light);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  grid-column: 2;
+}
+
+.peers-container h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: var(--dark);
+}
+
+.peers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.peer-card {
+  background: var(--light);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  border-left: 3px solid var(--primary);
+}
+
+.peer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.peer-header h3 {
+  font-size: 1rem;
+  color: var(--primary);
+  margin: 0;
+}
+
+.status-badge {
+  font-size: 1.2rem;
+}
+
+.peer-info {
+  margin-bottom: 0.75rem;
+}
+
+.peer-info p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: var(--dark);
+}
+
+.btn-connect {
+  width: 100%;
+  padding: 0.5rem;
+  background-color: var(--success);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 0.85rem;
+}
+
+.btn-connect:hover {
+  background-color: #059669;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
 }
 
 .messages-container h2 {
@@ -140,7 +268,11 @@ body {
 }
 
 .feature-card {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.1) 0%,
+    rgba(16, 185, 129, 0.1) 100%
+  );
   border: 1px solid var(--light);
   border-radius: var(--border-radius);
   padding: 1.5rem;
@@ -150,7 +282,11 @@ body {
 }
 
 .feature-card:hover {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.2) 0%,
+    rgba(16, 185, 129, 0.2) 100%
+  );
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -164,6 +300,18 @@ body {
 .feature-card p {
   font-weight: 600;
   color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.feature-card small {
+  color: #666;
+  font-size: 0.75rem;
+  display: block;
+}
+.feature-card small {
+  color: #666;
+  font-size: 0.75rem;
+  display: block;
 }
 
 .app-footer {
@@ -220,12 +368,30 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .peers-container {
+    grid-column: 1;
+  }
+
   .app-header {
     flex-direction: column;
     gap: 1rem;
   }
 
+  .header-right {
+    flex-direction: column;
+    width: 100%;
+  }
+
   .feature-grid {
     grid-template-columns: 1fr;
+  }
+
+  .messages-list {
+    max-height: 300px;
+  }
+
+  .peers-list {
+    max-height: 300px;
+    overflow-y: auto;
   }
 }

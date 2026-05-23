@@ -5,18 +5,21 @@ Shared library for type definitions, constants, and utility functions used acros
 ## Contents
 
 ### Types
+
 - Message interface
 - User interface
 - File metadata interface
 - Event types
 
 ### Constants
+
 - Message types
 - Event names
 - Error codes
 - Configuration values
 
 ### Utilities
+
 - Validation functions
 - Formatting helpers
 - Encryption/decryption
