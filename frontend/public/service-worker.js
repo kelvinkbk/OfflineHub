@@ -57,7 +57,11 @@ self.addEventListener("fetch", (event) => {
               try {
                 cache.put(event.request, responseClone);
               } catch (error) {
-                console.warn("Failed to cache request:", event.request.url, error);
+                console.warn(
+                  "Failed to cache request:",
+                  event.request.url,
+                  error,
+                );
               }
             })
             .catch((error) => {

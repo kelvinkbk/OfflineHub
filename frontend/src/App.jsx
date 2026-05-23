@@ -16,10 +16,15 @@ function App() {
   const [sharedFiles, setSharedFiles] = useState([]);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [pendingMessages, setPendingMessages] = useState(0);
+  const [typingUsers, setTypingUsers] = useState(new Set());
+  const [inCallWith, setInCallWith] = useState(null);
+  const [isInCall, setIsInCall] = useState(false);
 
   const socketRef = useRef(null);
   const dbRef = useRef(null);
   const fileInputRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const peerConnectionRef = useRef(null);
 
   useEffect(() => {
     // Initialize user ID
@@ -141,7 +146,8 @@ function App() {
       console.log("Connected to backend");
       setIsSocketConnected(true);
       // Get userId from localStorage to ensure it's available
-      const userIdForSocket = localStorage.getItem("userId") || `user-${Date.now()}`;
+      const userIdForSocket =
+        localStorage.getItem("userId") || `user-${Date.now()}`;
       socketRef.current.emit("user_connected", {
         userId: userIdForSocket,
         username: `User-${userIdForSocket.slice(-4)}`,
@@ -163,11 +169,35 @@ function App() {
 
     socketRef.current.on("user_typing", (data) => {
       console.log(`${data.username} is typing...`);
+      setTypingUsers((prev) => new Set([...prev, data.userId]));
+    });
+
+    socketRef.current.on("user_stopped_typing", (data) => {
+      setTypingUsers((prev) => {
+        const updated = new Set(prev);
+        updated.delete(data.userId);
+        return updated;
+      });
     });
 
     socketRef.current.on("peer_connected", (peer) => {
       console.log(`Peer connected: ${peer.name}`);
-      // Could initialize WebRTC here
+    });
+
+    socketRef.current.on("voice_call_incoming", (data) => {
+      console.log(`Incoming voice call from ${data.fromUserId}`);
+      setInCallWith(data.fromUserId);
+    });
+
+    socketRef.current.on("voice_call_answered", (data) => {
+      console.log(`Call answered by ${data.userId}`);
+      setIsInCall(true);
+    });
+
+    socketRef.current.on("voice_call_ended", () => {
+      console.log("Call ended");
+      setIsInCall(false);
+      setInCallWith(null);
     });
   };
 
@@ -317,6 +347,59 @@ function App() {
     a.download = file.name;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleTyping = () => {
+    if (socketRef.current && isSocketConnected) {
+      socketRef.current.emit("typing", {
+        userId,
+        username: `User-${userId?.slice(-4) || "?"}`,
+      });
+
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Set timeout to emit stopped typing after 1 second of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        socketRef.current.emit("stopped_typing", { userId });
+      }, 1000);
+    }
+  };
+
+  const initiateVoiceCall = (peerId) => {
+    console.log(`Initiating voice call with ${peerId}`);
+    if (socketRef.current && isSocketConnected) {
+      socketRef.current.emit("voice_call_request", {
+        fromUserId: userId,
+        toUserId: peerId,
+      });
+      setInCallWith(peerId);
+    }
+  };
+
+  const answerVoiceCall = () => {
+    console.log(`Answering voice call from ${inCallWith}`);
+    if (socketRef.current && isSocketConnected) {
+      socketRef.current.emit("voice_call_answer", {
+        userId,
+        toUserId: inCallWith,
+      });
+      setIsInCall(true);
+    }
+  };
+
+  const endVoiceCall = () => {
+    console.log("Ending voice call");
+    if (socketRef.current && isSocketConnected) {
+      socketRef.current.emit("voice_call_end", {
+        userId,
+        toUserId: inCallWith,
+      });
+      setIsInCall(false);
+      setInCallWith(null);
+    }
   };
 
   return (
@@ -503,11 +586,32 @@ function App() {
       </main>
 
       <footer className="app-footer">
+        {typingUsers.size > 0 && (
+          <div className="typing-indicator">
+            {Array.from(typingUsers).join(", ")}{" "}
+            {typingUsers.size === 1 ? "is" : "are"} typing...
+          </div>
+        )}
+        {isInCall && (
+          <div className="voice-call-active">
+            🎤 In call with User-{inCallWith?.slice(-4)}
+            <button
+              className="btn-end-call"
+              onClick={endVoiceCall}
+              title="End call"
+            >
+              End Call
+            </button>
+          </div>
+        )}
         <form onSubmit={handleSendMessage} className="message-form">
           <input
             type="text"
             value={messageInput}
-            onChange={(e) => setMessageInput(e.target.value)}
+            onChange={(e) => {
+              setMessageInput(e.target.value);
+              handleTyping();
+            }}
             placeholder="Type a message..."
             className="message-input"
           />
