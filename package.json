@@ -1,0 +1,22 @@
+{
+  "name": "offlinehub",
+  "version": "1.0.0",
+  "description": "Offline-first social app with walkie-talkie, local chat, and file sharing",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "install-all": "yarn install",
+    "dev": "concurrently \"yarn workspace frontend dev\" \"yarn workspace backend dev\"",
+    "build": "yarn workspace frontend build && yarn workspace backend build",
+    "start": "yarn workspace backend start",
+    "test": "yarn workspaces run test",
+    "lint": "yarn workspaces run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  }
+}

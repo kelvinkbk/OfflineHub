@@ -1,0 +1,13 @@
+{
+  "name": "@offlinehub/shared",
+  "version": "1.0.0",
+  "description": "Shared types and utilities for OfflineHub",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./types": "./src/types.js",
+    "./constants": "./src/constants.js",
+    "./utils": "./src/utils.js"
+  }
+}
