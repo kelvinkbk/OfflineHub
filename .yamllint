@@ -1,0 +1,18 @@
+---
+extends: default
+
+rules:
+  # CloudFormation uses custom YAML tags (!Ref, !Sub, !GetAtt, etc.)
+  # These are valid and should not trigger warnings
+  truthy:
+    allowed: ['true', 'false']
+  comments:
+    min-spaces-from-content: 1
+  line-length:
+    max: 120
+    level: warning
+
+# Ignore errors in CloudFormation files with custom tags
+ignore: |
+  aws-cloudformation.yaml
+  *-cloudformation.yaml
